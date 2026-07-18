@@ -1,6 +1,6 @@
 # YouScan Test Task — Full-Stack Dashboard
 
-Full spec lives in [REQUIREMENTS.md](REQUIREMENTS.md) — read it before making architecture decisions. This file tracks conventions and commands; update it as the project takes shape (it currently describes the plan, not yet-scaffolded code).
+Full spec lives in [README.md](README.md) — read it before making architecture decisions. This file tracks conventions and commands. README.md currently holds the raw assignment brief; it will be expanded into the full project README (run/test/deploy instructions, architecture, limitations) once the deployment step lands.
 
 ## What this is
 A dashboard app with a grid of widgets (line chart, bar chart, text). Widgets are added via a button, laid out 3-per-row, persist across reloads (position + data), and are deletable. Text widgets are editable in place.

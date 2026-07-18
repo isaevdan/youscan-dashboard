@@ -1,0 +1,80 @@
+name: Backend CI/CD
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend.yml"
+  pull_request:
+    branches: [master]
+    paths:
+      - "backend/**"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  DOCKERHUB_IMAGE: denysisaiev/youscan-backend
+  AZURE_RESOURCE_GROUP: rg-youscan-dashboard
+  AZURE_CONTAINERAPP_NAME: ca-youscan-backend
+  FRONTEND_URL: https://ambitious-rock-0a1432a03.7.azurestaticapps.net
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: backend/global.json
+      - name: Restore
+        run: dotnet restore Dashboard.sln
+        working-directory: backend
+      - name: Test
+        run: dotnet test Dashboard.sln --no-restore --configuration Release --logger "console;verbosity=detailed"
+        working-directory: backend
+
+  build-and-deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/src/Dashboard.Api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.DOCKERHUB_IMAGE }}:latest
+            ${{ env.DOCKERHUB_IMAGE }}:${{ github.sha }}
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy new image to Container App
+        uses: azure/CLI@v2
+        with:
+          inlineScript: |
+            az containerapp update \
+              --name ${{ env.AZURE_CONTAINERAPP_NAME }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --image ${{ env.DOCKERHUB_IMAGE }}:${{ github.sha }} \
+              --set-env-vars \
+                "ConnectionStrings__Default=Data Source=/data/dashboard.db" \
+                "Cors__AllowedOrigins__0=${{ env.FRONTEND_URL }}"

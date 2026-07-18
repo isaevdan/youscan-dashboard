@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Dashboard.Api.Middleware;
 
-public class GlobalExceptionHandler : IExceptionHandler
+public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(
         HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
@@ -17,6 +17,12 @@ public class GlobalExceptionHandler : IExceptionHandler
             InvalidWidgetOperationException => (StatusCodes.Status400BadRequest, "Invalid Operation"),
             _ => (StatusCodes.Status500InternalServerError, "Server Error")
         };
+
+        if (statusCode == StatusCodes.Status500InternalServerError)
+        {
+            logger.LogError(exception, "Unhandled exception processing {Method} {Path}",
+                httpContext.Request.Method, httpContext.Request.Path);
+        }
 
         var problemDetails = new ProblemDetails
         {

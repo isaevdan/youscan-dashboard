@@ -1,8 +1,10 @@
 import { apiClient } from './client';
-import type { Widget, WidgetType } from '../types/widget';
+import type { Widget, WidgetsPage, WidgetType } from '../types/widget';
 
-export async function getWidgets(): Promise<Widget[]> {
-  const { data } = await apiClient.get<Widget[]>('/api/widgets');
+export async function getWidgetsPage(cursor?: number, limit?: number): Promise<WidgetsPage> {
+  const { data } = await apiClient.get<WidgetsPage>('/api/widgets', {
+    params: { after: cursor, limit },
+  });
   return data;
 }
 

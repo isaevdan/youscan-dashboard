@@ -35,3 +35,9 @@ export interface TextWidget extends BaseWidget {
 }
 
 export type Widget = LineChartWidget | BarChartWidget | TextWidget;
+
+export interface WidgetsPage {
+  items: Widget[];
+  hasMore: boolean;
+  nextCursor: number | null;
+}

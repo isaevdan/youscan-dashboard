@@ -1,24 +1,42 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { server } from '../test/msw/server';
-import { createWidget, deleteWidget, getWidgets, updateWidgetText } from './widgets';
+import { createWidget, deleteWidget, getWidgetsPage, updateWidgetText } from './widgets';
 
 const API_URL = 'http://localhost:8080';
 
 describe('widgets api', () => {
-  it('getWidgets fetches and returns the widget list', async () => {
+  it('getWidgetsPage fetches and returns a page of widgets', async () => {
     server.use(
       http.get(`${API_URL}/api/widgets`, () =>
-        HttpResponse.json([
-          { id: 1, type: 'Text', row: 0, column: 0, data: { text: 'hi' } },
-        ]),
+        HttpResponse.json({
+          items: [{ id: 1, type: 'Text', row: 0, column: 0, data: { text: 'hi' } }],
+          hasMore: false,
+          nextCursor: null,
+        }),
       ),
     );
 
-    const widgets = await getWidgets();
+    const page = await getWidgetsPage();
 
-    expect(widgets).toHaveLength(1);
-    expect(widgets[0].id).toBe(1);
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0].id).toBe(1);
+    expect(page.hasMore).toBe(false);
+  });
+
+  it('getWidgetsPage sends the cursor and limit as query params', async () => {
+    let receivedUrl: URL | undefined;
+    server.use(
+      http.get(`${API_URL}/api/widgets`, ({ request }) => {
+        receivedUrl = new URL(request.url);
+        return HttpResponse.json({ items: [], hasMore: false, nextCursor: null });
+      }),
+    );
+
+    await getWidgetsPage(5, 10);
+
+    expect(receivedUrl?.searchParams.get('after')).toBe('5');
+    expect(receivedUrl?.searchParams.get('limit')).toBe('10');
   });
 
   it('createWidget posts the type and returns the created widget', async () => {

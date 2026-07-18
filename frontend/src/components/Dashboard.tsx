@@ -1,10 +1,19 @@
 import { Alert, Button, Skeleton, Space, Typography } from 'antd';
-import { useCreateWidget, useWidgets } from '../api/useWidgets';
+import { useCreateWidget, useInfiniteWidgets } from '../api/useWidgets';
+import { useInfiniteScrollSentinel } from '../hooks/useInfiniteScrollSentinel';
 import { WidgetGrid } from './WidgetGrid';
 
 export function Dashboard() {
-  const widgetsQuery = useWidgets();
+  const widgetsQuery = useInfiniteWidgets();
   const createMutation = useCreateWidget();
+
+  const sentinelRef = useInfiniteScrollSentinel(() => {
+    if (!widgetsQuery.isFetchingNextPage) {
+      widgetsQuery.fetchNextPage();
+    }
+  }, !!widgetsQuery.hasNextPage);
+
+  const widgets = widgetsQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <div style={{ padding: 24 }}>
@@ -19,7 +28,9 @@ export function Dashboard() {
       {widgetsQuery.isError && (
         <Alert type="error" message="Failed to load widgets" description="Please try refreshing the page." />
       )}
-      {widgetsQuery.isSuccess && <WidgetGrid widgets={widgetsQuery.data} />}
+      {widgetsQuery.isSuccess && <WidgetGrid widgets={widgets} />}
+      {widgetsQuery.hasNextPage && <div ref={sentinelRef} style={{ height: 1 }} />}
+      {widgetsQuery.isFetchingNextPage && <Skeleton active style={{ marginTop: 16 }} />}
     </div>
   );
 }

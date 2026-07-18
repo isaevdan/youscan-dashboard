@@ -6,21 +6,32 @@ Full spec lives in [REQUIREMENTS.md](REQUIREMENTS.md) — read it before making 
 A dashboard app with a grid of widgets (line chart, bar chart, text). Widgets are added via a button, laid out 3-per-row, persist across reloads (position + data), and are deletable. Text widgets are editable in place.
 
 ## Stack
-- **Backend**: .NET Core Web API — persistence via **SQLite + EF Core**
-- **Frontend**: React 18 + TypeScript + Vite
-- **Charts**: Recharts or Chart.js
+- **Backend**: .NET 10 Minimal API, **Clean Architecture** (Domain/Application/Infrastructure/Api), **CQRS via MediatR** + FluentValidation, persistence via **SQLite + EF Core**
+- **Frontend**: React 18 + TypeScript + Vite, Ant Design, React Query, Recharts
+- **Process**: TDD across the full stack — tests written before implementation at every layer
+- **Containerization**: Docker + docker-compose locally; deployed to **Azure Container Apps** via Docker images on Docker Hub
 
-## Planned structure
+Full architecture/sequencing detail lives in the approved plan at `C:\Users\Denys\.claude\plans\cached-puzzling-turtle.md`.
+
+## Structure
 ```
-/backend    ASP.NET Core Web API project
-/frontend   React + TS + Vite app
+/backend
+  Dashboard.sln, global.json (pinned to .NET 10.0.302)
+  src/Dashboard.Domain           entities, enums, domain exceptions — no dependencies
+  src/Dashboard.Application      CQRS commands/queries (MediatR), validators (FluentValidation), DTOs — depends on Domain
+  src/Dashboard.Infrastructure   EF Core DbContext, repositories, SQLite — depends on Application, Domain
+  src/Dashboard.Api              Minimal API endpoints, DI wiring, Dockerfile — depends on Application, Infrastructure
+  tests/Dashboard.{Domain,Application,Infrastructure,Api}.Tests   one per src project
+/frontend
+  Vite + React 18 + TypeScript (strict), Ant Design, React Query, Recharts
+  src/test/                      Vitest setup + MSW server (src/test/msw/server.ts)
+  src/App.tsx, src/main.tsx      entry points (component structure built out via TDD)
 ```
-(Update this section once the projects are actually scaffolded — exact folder/project names may differ.)
 
 ## Commands
-_To be filled in once scaffolded:_
-- Backend run / build / test: `dotnet run` / `dotnet build` / `dotnet test` (from `/backend`)
-- Frontend dev / build / typecheck: `npm run dev` / `npm run build` / `npm run typecheck` (from `/frontend`)
+- Backend build / test (from `/backend`): `dotnet build`, `dotnet test`
+- Backend run (from `/backend`): `dotnet run --project src/Dashboard.Api`
+- Frontend dev / build / typecheck / test (from `/frontend`, requires Node 24 LTS — `nvm use 24.18.0`): `npm run dev` / `npm run build` / `npm run typecheck` / `npm run test`
 
 ## Conventions
 - Widget types: `line-chart`, `bar-chart`, `text` — keep a single discriminated shape for widgets on both frontend and backend so new widget types stay easy to add.

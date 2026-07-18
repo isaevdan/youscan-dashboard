@@ -45,6 +45,24 @@ public class CreateWidgetCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_FourthWidget_WrapsToNextRow()
+    {
+        var existing = new List<Widget>
+        {
+            Widget.Create(WidgetType.Text, order: 0, dataJson: "{\"text\":\"\"}"),
+            Widget.Create(WidgetType.BarChart, order: 1, dataJson: "{\"points\":[]}"),
+            Widget.Create(WidgetType.Text, order: 2, dataJson: "{\"text\":\"\"}")
+        };
+        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(existing);
+        _dataGenerator.GenerateChartDataJson().Returns("{\"points\":[]}");
+
+        var result = await CreateHandler().Handle(new CreateWidgetCommand("LineChart"), CancellationToken.None);
+
+        Assert.Equal(1, result.Row);
+        Assert.Equal(0, result.Column);
+    }
+
+    [Fact]
     public async Task Handle_TextWidget_UsesEmptyTextPayload_AndDoesNotCallDataGenerator()
     {
         _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<Widget>());

@@ -120,4 +120,18 @@ public class WidgetEndpointsTests : IDisposable
         Assert.Equal(0, created!.Row);
         Assert.Equal(2, created.Column);
     }
+
+    [Fact]
+    public async Task CreateWidget_FourthInRow_WrapsToRowOneColumnZero()
+    {
+        await _client.PostAsJsonAsync("/api/widgets", new { type = "Text" });
+        await _client.PostAsJsonAsync("/api/widgets", new { type = "Text" });
+        await _client.PostAsJsonAsync("/api/widgets", new { type = "Text" });
+        var response = await _client.PostAsJsonAsync("/api/widgets", new { type = "LineChart" });
+
+        var created = await response.Content.ReadFromJsonAsync<WidgetResponse>();
+
+        Assert.Equal(1, created!.Row);
+        Assert.Equal(0, created.Column);
+    }
 }

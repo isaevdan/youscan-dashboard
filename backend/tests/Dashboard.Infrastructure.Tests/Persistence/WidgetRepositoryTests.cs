@@ -36,7 +36,7 @@ public class WidgetRepositoryTests : IDisposable
     private DashboardDbContext CreateContext() => new(_options);
 
     [Fact]
-    public async Task AddAsync_ThenReopenContext_GetAllReturnsPersistedWidget()
+    public async Task AddAsync_ThenReopenContext_GetPageReturnsPersistedWidget()
     {
         await using (var context = CreateContext())
         {
@@ -48,12 +48,77 @@ public class WidgetRepositoryTests : IDisposable
 
         await using var verifyContext = CreateContext();
         var verifyRepository = new WidgetRepository(verifyContext);
-        var all = await verifyRepository.GetAllAsync(CancellationToken.None);
+        var page = await verifyRepository.GetPageAsync(after: null, limit: 10, CancellationToken.None);
 
-        var persisted = Assert.Single(all);
+        var persisted = Assert.Single(page);
         Assert.Equal(WidgetType.Text, persisted.Type);
         Assert.Equal("{\"text\":\"hi\"}", persisted.DataJson);
         Assert.True(persisted.Id > 0);
+    }
+
+    [Fact]
+    public async Task GetPageAsync_MoreWidgetsThanLimit_ReturnsOnlyLimitInOrder()
+    {
+        await using (var context = CreateContext())
+        {
+            var repository = new WidgetRepository(context);
+            for (var i = 0; i < 5; i++)
+            {
+                await repository.AddAsync(Widget.Create(WidgetType.Text, order: i, dataJson: "{\"text\":\"\"}"), CancellationToken.None);
+            }
+            await repository.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var verifyContext = CreateContext();
+        var page = await new WidgetRepository(verifyContext).GetPageAsync(after: null, limit: 3, CancellationToken.None);
+
+        Assert.Equal(3, page.Count);
+        Assert.Equal([0, 1, 2], page.Select(w => w.Order));
+    }
+
+    [Fact]
+    public async Task GetPageAsync_WithAfterCursor_ReturnsOnlyWidgetsAfterCursor()
+    {
+        await using (var context = CreateContext())
+        {
+            var repository = new WidgetRepository(context);
+            for (var i = 0; i < 5; i++)
+            {
+                await repository.AddAsync(Widget.Create(WidgetType.Text, order: i, dataJson: "{\"text\":\"\"}"), CancellationToken.None);
+            }
+            await repository.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var verifyContext = CreateContext();
+        var page = await new WidgetRepository(verifyContext).GetPageAsync(after: 2, limit: 10, CancellationToken.None);
+
+        Assert.Equal([3, 4], page.Select(w => w.Order));
+    }
+
+    [Fact]
+    public async Task GetMaxOrderAsync_NoWidgets_ReturnsNull()
+    {
+        await using var context = CreateContext();
+        var maxOrder = await new WidgetRepository(context).GetMaxOrderAsync(CancellationToken.None);
+
+        Assert.Null(maxOrder);
+    }
+
+    [Fact]
+    public async Task GetMaxOrderAsync_WithWidgets_ReturnsHighestOrder()
+    {
+        await using (var context = CreateContext())
+        {
+            var repository = new WidgetRepository(context);
+            await repository.AddAsync(Widget.Create(WidgetType.Text, order: 0, dataJson: "{\"text\":\"\"}"), CancellationToken.None);
+            await repository.AddAsync(Widget.Create(WidgetType.Text, order: 4, dataJson: "{\"text\":\"\"}"), CancellationToken.None);
+            await repository.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var verifyContext = CreateContext();
+        var maxOrder = await new WidgetRepository(verifyContext).GetMaxOrderAsync(CancellationToken.None);
+
+        Assert.Equal(4, maxOrder);
     }
 
     [Fact]

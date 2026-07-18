@@ -4,7 +4,11 @@ namespace Dashboard.Application.Common.Interfaces;
 
 public interface IWidgetRepository
 {
-    Task<IReadOnlyList<Widget>> GetAllAsync(CancellationToken cancellationToken);
+    /// <summary>Widgets ordered by Order ascending, optionally after a given Order cursor, up to limit.</summary>
+    Task<IReadOnlyList<Widget>> GetPageAsync(int? after, int limit, CancellationToken cancellationToken);
+
+    /// <summary>The highest Order currently in use, or null if there are no widgets.</summary>
+    Task<int?> GetMaxOrderAsync(CancellationToken cancellationToken);
 
     Task<Widget?> GetByIdAsync(int id, CancellationToken cancellationToken);
 

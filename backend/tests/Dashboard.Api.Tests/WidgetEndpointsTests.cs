@@ -22,14 +22,28 @@ public class WidgetEndpointsTests : IDisposable
 
     private record WidgetResponse(int Id, string Type, int Row, int Column, JsonElement Data);
 
-    [Fact]
-    public async Task GetWidgets_Initially_ReturnsEmptyList()
-    {
-        var response = await _client.GetAsync("/api/widgets");
+    private record WidgetsPageResponse(List<WidgetResponse> Items, bool HasMore, int? NextCursor);
 
+    private async Task<WidgetsPageResponse> GetWidgetsAsync(int? after = null, int? limit = null)
+    {
+        var query = new List<string>();
+        if (after is not null) query.Add($"after={after}");
+        if (limit is not null) query.Add($"limit={limit}");
+        var url = "/api/widgets" + (query.Count > 0 ? "?" + string.Join("&", query) : "");
+
+        var response = await _client.GetAsync(url);
         response.EnsureSuccessStatusCode();
-        var widgets = await response.Content.ReadFromJsonAsync<List<WidgetResponse>>();
-        Assert.Empty(widgets!);
+        return (await response.Content.ReadFromJsonAsync<WidgetsPageResponse>())!;
+    }
+
+    [Fact]
+    public async Task GetWidgets_Initially_ReturnsEmptyPage()
+    {
+        var page = await GetWidgetsAsync();
+
+        Assert.Empty(page.Items);
+        Assert.False(page.HasMore);
+        Assert.Null(page.NextCursor);
     }
 
     [Fact]
@@ -41,9 +55,8 @@ public class WidgetEndpointsTests : IDisposable
         var created = await response.Content.ReadFromJsonAsync<WidgetResponse>();
         Assert.Equal("Text", created!.Type);
 
-        var listResponse = await _client.GetAsync("/api/widgets");
-        var widgets = await listResponse.Content.ReadFromJsonAsync<List<WidgetResponse>>();
-        Assert.Contains(widgets!, w => w.Id == created.Id);
+        var page = await GetWidgetsAsync();
+        Assert.Contains(page.Items, w => w.Id == created.Id);
     }
 
     [Fact]
@@ -95,9 +108,8 @@ public class WidgetEndpointsTests : IDisposable
         var deleteResponse = await _client.DeleteAsync($"/api/widgets/{created!.Id}");
         Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
 
-        var listResponse = await _client.GetAsync("/api/widgets");
-        var widgets = await listResponse.Content.ReadFromJsonAsync<List<WidgetResponse>>();
-        Assert.DoesNotContain(widgets!, w => w.Id == created.Id);
+        var page = await GetWidgetsAsync();
+        Assert.DoesNotContain(page.Items, w => w.Id == created.Id);
     }
 
     [Fact]
@@ -133,5 +145,48 @@ public class WidgetEndpointsTests : IDisposable
 
         Assert.Equal(1, created!.Row);
         Assert.Equal(0, created.Column);
+    }
+
+    [Fact]
+    public async Task GetWidgets_MoreWidgetsThanLimit_SetsHasMoreAndNextCursor()
+    {
+        for (var i = 0; i < 5; i++)
+        {
+            await _client.PostAsJsonAsync("/api/widgets", new { type = "Text" });
+        }
+
+        var page = await GetWidgetsAsync(limit: 3);
+
+        Assert.Equal(3, page.Items.Count);
+        Assert.True(page.HasMore);
+        Assert.NotNull(page.NextCursor);
+    }
+
+    [Fact]
+    public async Task GetWidgets_SecondPageUsingCursor_ReturnsRemainingWidgetsWithNoOverlap()
+    {
+        var createdIds = new List<int>();
+        for (var i = 0; i < 5; i++)
+        {
+            var response = await _client.PostAsJsonAsync("/api/widgets", new { type = "Text" });
+            var created = await response.Content.ReadFromJsonAsync<WidgetResponse>();
+            createdIds.Add(created!.Id);
+        }
+
+        var firstPage = await GetWidgetsAsync(limit: 3);
+        var secondPage = await GetWidgetsAsync(after: firstPage.NextCursor, limit: 3);
+
+        Assert.Equal(2, secondPage.Items.Count);
+        Assert.False(secondPage.HasMore);
+        Assert.Empty(firstPage.Items.Select(w => w.Id).Intersect(secondPage.Items.Select(w => w.Id)));
+        Assert.Equal(createdIds, firstPage.Items.Select(w => w.Id).Concat(secondPage.Items.Select(w => w.Id)));
+    }
+
+    [Fact]
+    public async Task GetWidgets_LimitTooHigh_Returns400()
+    {
+        var response = await _client.GetAsync("/api/widgets?limit=101");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

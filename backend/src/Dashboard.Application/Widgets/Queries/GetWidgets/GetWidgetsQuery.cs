@@ -2,4 +2,4 @@ using MediatR;
 
 namespace Dashboard.Application.Widgets.Queries.GetWidgets;
 
-public sealed record GetWidgetsQuery : IRequest<IReadOnlyList<WidgetDto>>;
+public sealed record GetWidgetsQuery(int? After, int Limit) : IRequest<WidgetsPageDto>;

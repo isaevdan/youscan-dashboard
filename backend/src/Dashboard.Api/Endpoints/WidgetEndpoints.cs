@@ -8,12 +8,14 @@ namespace Dashboard.Api.Endpoints;
 
 public static class WidgetEndpoints
 {
+    private const int DefaultPageSize = 30;
+
     public static IEndpointRouteBuilder MapWidgetEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/widgets");
 
-        group.MapGet("/", async (ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetWidgetsQuery(), ct)));
+        group.MapGet("/", async (int? after, int? limit, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetWidgetsQuery(after, limit ?? DefaultPageSize), ct)));
 
         group.MapPost("/", async (CreateWidgetRequest request, ISender sender, CancellationToken ct) =>
         {

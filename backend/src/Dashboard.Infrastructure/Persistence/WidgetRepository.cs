@@ -13,8 +13,27 @@ public class WidgetRepository : IWidgetRepository
         _context = context;
     }
 
-    public async Task<IReadOnlyList<Widget>> GetAllAsync(CancellationToken cancellationToken) =>
-        await _context.Widgets.ToListAsync(cancellationToken);
+    public async Task<IReadOnlyList<Widget>> GetPageAsync(int? after, int limit, CancellationToken cancellationToken)
+    {
+        var query = _context.Widgets.OrderBy(w => w.Order).AsQueryable();
+
+        if (after.HasValue)
+        {
+            query = query.Where(w => w.Order > after.Value);
+        }
+
+        return await query.Take(limit).ToListAsync(cancellationToken);
+    }
+
+    public async Task<int?> GetMaxOrderAsync(CancellationToken cancellationToken)
+    {
+        if (!await _context.Widgets.AnyAsync(cancellationToken))
+        {
+            return null;
+        }
+
+        return await _context.Widgets.MaxAsync(w => w.Order, cancellationToken);
+    }
 
     public Task<Widget?> GetByIdAsync(int id, CancellationToken cancellationToken) =>
         _context.Widgets.FirstOrDefaultAsync(w => w.Id == id, cancellationToken);

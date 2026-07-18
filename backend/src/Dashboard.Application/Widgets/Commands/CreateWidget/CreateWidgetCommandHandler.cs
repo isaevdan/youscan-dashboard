@@ -23,8 +23,8 @@ public sealed class CreateWidgetCommandHandler : IRequestHandler<CreateWidgetCom
     {
         var type = Enum.Parse<WidgetType>(request.Type, ignoreCase: true);
 
-        var existingWidgets = await _repository.GetAllAsync(cancellationToken);
-        var nextOrder = existingWidgets.Count == 0 ? 0 : existingWidgets.Max(w => w.Order) + 1;
+        var maxOrder = await _repository.GetMaxOrderAsync(cancellationToken);
+        var nextOrder = maxOrder.HasValue ? maxOrder.Value + 1 : 0;
 
         var dataJson = type == WidgetType.Text
             ? "{\"text\":\"\"}"

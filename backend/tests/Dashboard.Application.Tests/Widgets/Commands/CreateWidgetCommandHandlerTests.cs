@@ -17,7 +17,7 @@ public class CreateWidgetCommandHandlerTests
     [Fact]
     public async Task Handle_FirstWidget_AssignsFirstGridCell()
     {
-        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<Widget>());
+        _repository.GetMaxOrderAsync(Arg.Any<CancellationToken>()).Returns((int?)null);
         _dataGenerator.GenerateChartDataJson().Returns("{\"points\":[]}");
 
         var result = await CreateHandler().Handle(new CreateWidgetCommand("LineChart"), CancellationToken.None);
@@ -30,12 +30,7 @@ public class CreateWidgetCommandHandlerTests
     [Fact]
     public async Task Handle_WithExistingWidgets_AssignsNextGridCell()
     {
-        var existing = new List<Widget>
-        {
-            Widget.Create(WidgetType.Text, order: 0, dataJson: "{\"text\":\"\"}"),
-            Widget.Create(WidgetType.BarChart, order: 1, dataJson: "{\"points\":[]}")
-        };
-        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(existing);
+        _repository.GetMaxOrderAsync(Arg.Any<CancellationToken>()).Returns((int?)1);
         _dataGenerator.GenerateChartDataJson().Returns("{\"points\":[]}");
 
         var result = await CreateHandler().Handle(new CreateWidgetCommand("BarChart"), CancellationToken.None);
@@ -47,13 +42,7 @@ public class CreateWidgetCommandHandlerTests
     [Fact]
     public async Task Handle_FourthWidget_WrapsToNextRow()
     {
-        var existing = new List<Widget>
-        {
-            Widget.Create(WidgetType.Text, order: 0, dataJson: "{\"text\":\"\"}"),
-            Widget.Create(WidgetType.BarChart, order: 1, dataJson: "{\"points\":[]}"),
-            Widget.Create(WidgetType.Text, order: 2, dataJson: "{\"text\":\"\"}")
-        };
-        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(existing);
+        _repository.GetMaxOrderAsync(Arg.Any<CancellationToken>()).Returns((int?)2);
         _dataGenerator.GenerateChartDataJson().Returns("{\"points\":[]}");
 
         var result = await CreateHandler().Handle(new CreateWidgetCommand("LineChart"), CancellationToken.None);
@@ -65,7 +54,7 @@ public class CreateWidgetCommandHandlerTests
     [Fact]
     public async Task Handle_TextWidget_UsesEmptyTextPayload_AndDoesNotCallDataGenerator()
     {
-        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<Widget>());
+        _repository.GetMaxOrderAsync(Arg.Any<CancellationToken>()).Returns((int?)null);
 
         var result = await CreateHandler().Handle(new CreateWidgetCommand("Text"), CancellationToken.None);
 
@@ -78,7 +67,7 @@ public class CreateWidgetCommandHandlerTests
     [InlineData("BarChart")]
     public async Task Handle_ChartWidget_UsesDataGenerator(string type)
     {
-        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<Widget>());
+        _repository.GetMaxOrderAsync(Arg.Any<CancellationToken>()).Returns((int?)null);
         _dataGenerator.GenerateChartDataJson().Returns("{\"points\":[{\"label\":\"A\",\"value\":1}]}");
 
         await CreateHandler().Handle(new CreateWidgetCommand(type), CancellationToken.None);
@@ -89,7 +78,7 @@ public class CreateWidgetCommandHandlerTests
     [Fact]
     public async Task Handle_PersistsWidgetAndSavesChanges()
     {
-        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<Widget>());
+        _repository.GetMaxOrderAsync(Arg.Any<CancellationToken>()).Returns((int?)null);
 
         await CreateHandler().Handle(new CreateWidgetCommand("Text"), CancellationToken.None);
 

@@ -14,29 +14,57 @@ public class GetWidgetsQueryHandlerTests
     private GetWidgetsQueryHandler CreateHandler() => new(_repository, TestMapper.Instance);
 
     [Fact]
-    public async Task Handle_ReturnsWidgetsOrderedByPosition()
+    public async Task Handle_FewerWidgetsThanLimit_ReturnsAllWithHasMoreFalse()
     {
         var widgets = new List<Widget>
         {
-            Widget.Create(WidgetType.BarChart, order: 1, dataJson: "{\"points\":[]}"),
-            Widget.Create(WidgetType.Text, order: 0, dataJson: "{\"text\":\"\"}")
+            Widget.Create(WidgetType.Text, order: 0, dataJson: "{\"text\":\"\"}"),
+            Widget.Create(WidgetType.BarChart, order: 1, dataJson: "{\"points\":[]}")
         };
-        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(widgets);
+        _repository.GetPageAsync(null, 11, Arg.Any<CancellationToken>()).Returns(widgets);
 
-        var result = await CreateHandler().Handle(new GetWidgetsQuery(), CancellationToken.None);
+        var result = await CreateHandler().Handle(new GetWidgetsQuery(After: null, Limit: 10), CancellationToken.None);
 
-        Assert.Equal(2, result.Count);
-        Assert.Equal(WidgetType.Text, result[0].Type);
-        Assert.Equal(WidgetType.BarChart, result[1].Type);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Equal(WidgetType.Text, result.Items[0].Type);
+        Assert.Equal(WidgetType.BarChart, result.Items[1].Type);
+        Assert.False(result.HasMore);
+        Assert.Null(result.NextCursor);
     }
 
     [Fact]
-    public async Task Handle_NoWidgets_ReturnsEmptyList()
+    public async Task Handle_NoWidgets_ReturnsEmptyItemsAndHasMoreFalse()
     {
-        _repository.GetAllAsync(Arg.Any<CancellationToken>()).Returns(new List<Widget>());
+        _repository.GetPageAsync(null, 11, Arg.Any<CancellationToken>()).Returns(new List<Widget>());
 
-        var result = await CreateHandler().Handle(new GetWidgetsQuery(), CancellationToken.None);
+        var result = await CreateHandler().Handle(new GetWidgetsQuery(After: null, Limit: 10), CancellationToken.None);
 
-        Assert.Empty(result);
+        Assert.Empty(result.Items);
+        Assert.False(result.HasMore);
+    }
+
+    [Fact]
+    public async Task Handle_MoreWidgetsThanLimit_ReturnsOnlyLimitAndSetsHasMoreAndNextCursor()
+    {
+        var widgets = Enumerable.Range(0, 4)
+            .Select(i => Widget.Create(WidgetType.Text, order: i, dataJson: "{\"text\":\"\"}"))
+            .ToList();
+        _repository.GetPageAsync(null, 4, Arg.Any<CancellationToken>()).Returns(widgets);
+
+        var result = await CreateHandler().Handle(new GetWidgetsQuery(After: null, Limit: 3), CancellationToken.None);
+
+        Assert.Equal(3, result.Items.Count);
+        Assert.True(result.HasMore);
+        Assert.Equal(2, result.NextCursor);
+    }
+
+    [Fact]
+    public async Task Handle_PassesAfterCursorAndLimitPlusOneToRepository()
+    {
+        _repository.GetPageAsync(5, 11, Arg.Any<CancellationToken>()).Returns(new List<Widget>());
+
+        await CreateHandler().Handle(new GetWidgetsQuery(After: 5, Limit: 10), CancellationToken.None);
+
+        await _repository.Received(1).GetPageAsync(5, 11, Arg.Any<CancellationToken>());
     }
 }

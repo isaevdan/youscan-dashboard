@@ -1,4 +1,4 @@
-import { Alert, Button, Skeleton, Space, Typography } from 'antd';
+import { Alert, Button, FloatButton, Skeleton, Space, Typography } from 'antd';
 import { useCreateWidget, useInfiniteWidgets } from '../api/useWidgets';
 import { useInfiniteScrollSentinel } from '../hooks/useInfiniteScrollSentinel';
 import { WidgetGrid } from './WidgetGrid';
@@ -31,6 +31,8 @@ export function Dashboard() {
       {widgetsQuery.isSuccess && <WidgetGrid widgets={widgets} />}
       {widgetsQuery.hasNextPage && <div ref={sentinelRef} style={{ height: 1 }} />}
       {widgetsQuery.isFetchingNextPage && <Skeleton active style={{ marginTop: 16 }} />}
+
+      <FloatButton.BackTop visibilityHeight={400} />
     </div>
   );
 }

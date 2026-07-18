@@ -141,4 +141,20 @@ describe('Dashboard', () => {
       expect(capturedCallback).toBeUndefined();
     });
   });
+
+  it('does not show the back-to-top button while the page is still at the top', async () => {
+    server.use(http.get(`${API_URL}/api/widgets`, emptyPage));
+
+    renderWithClient(<Dashboard />);
+    await screen.findByText(/no widgets/i);
+
+    // FloatButton.BackTop only mounts once the page has scrolled past its
+    // visibilityHeight - this stays hidden at the default scroll position.
+    // (The scroll-triggered show/hide itself is exercised manually in a real
+    // browser: antd's threshold check compares the scroll event's `target`
+    // to `window` by reference, which jsdom under Vitest does not preserve
+    // across a dispatched `scroll` event, making that transition unreliable
+    // to simulate here.)
+    expect(document.querySelector('.ant-float-btn')).not.toBeInTheDocument();
+  });
 });

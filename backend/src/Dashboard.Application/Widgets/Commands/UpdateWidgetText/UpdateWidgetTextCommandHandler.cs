@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AutoMapper;
 using Dashboard.Application.Common.Exceptions;
 using Dashboard.Application.Common.Interfaces;
 using Dashboard.Domain.Entities;
@@ -9,10 +10,12 @@ namespace Dashboard.Application.Widgets.Commands.UpdateWidgetText;
 public sealed class UpdateWidgetTextCommandHandler : IRequestHandler<UpdateWidgetTextCommand, WidgetDto>
 {
     private readonly IWidgetRepository _repository;
+    private readonly IMapper _mapper;
 
-    public UpdateWidgetTextCommandHandler(IWidgetRepository repository)
+    public UpdateWidgetTextCommandHandler(IWidgetRepository repository, IMapper mapper)
     {
         _repository = repository;
+        _mapper = mapper;
     }
 
     public async Task<WidgetDto> Handle(UpdateWidgetTextCommand request, CancellationToken cancellationToken)
@@ -25,6 +28,6 @@ public sealed class UpdateWidgetTextCommandHandler : IRequestHandler<UpdateWidge
 
         await _repository.SaveChangesAsync(cancellationToken);
 
-        return WidgetDto.FromEntity(widget);
+        return _mapper.Map<WidgetDto>(widget);
     }
 }

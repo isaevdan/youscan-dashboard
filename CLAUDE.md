@@ -6,7 +6,7 @@ Full spec lives in [REQUIREMENTS.md](REQUIREMENTS.md) — read it before making 
 A dashboard app with a grid of widgets (line chart, bar chart, text). Widgets are added via a button, laid out 3-per-row, persist across reloads (position + data), and are deletable. Text widgets are editable in place.
 
 ## Stack
-- **Backend**: .NET 10 Minimal API, **Clean Architecture** (Domain/Application/Infrastructure/Api), **CQRS via MediatR** + FluentValidation, persistence via **SQLite + EF Core**
+- **Backend**: .NET 10 Minimal API, **Clean Architecture** (Domain/Application/Infrastructure/Api), **CQRS via MediatR** + FluentValidation, **AutoMapper** for entity→DTO mapping, persistence via **SQLite + EF Core**
 - **Frontend**: React 18 + TypeScript + Vite, Ant Design, React Query, Recharts
 - **Process**: TDD across the full stack — tests written before implementation at every layer
 - **Containerization**: Docker + docker-compose locally; deployed to **Azure Container Apps** via Docker images on Docker Hub

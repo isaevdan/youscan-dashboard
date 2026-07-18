@@ -12,7 +12,7 @@ public class CreateWidgetCommandHandlerTests
     private readonly IWidgetRepository _repository = Substitute.For<IWidgetRepository>();
     private readonly IRandomDataGenerator _dataGenerator = Substitute.For<IRandomDataGenerator>();
 
-    private CreateWidgetCommandHandler CreateHandler() => new(_repository, _dataGenerator);
+    private CreateWidgetCommandHandler CreateHandler() => new(_repository, _dataGenerator, TestMapper.Instance);
 
     [Fact]
     public async Task Handle_FirstWidget_AssignsFirstGridCell()

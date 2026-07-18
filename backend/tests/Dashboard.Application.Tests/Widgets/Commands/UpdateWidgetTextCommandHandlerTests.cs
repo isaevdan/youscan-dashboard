@@ -13,7 +13,7 @@ public class UpdateWidgetTextCommandHandlerTests
 {
     private readonly IWidgetRepository _repository = Substitute.For<IWidgetRepository>();
 
-    private UpdateWidgetTextCommandHandler CreateHandler() => new(_repository);
+    private UpdateWidgetTextCommandHandler CreateHandler() => new(_repository, TestMapper.Instance);
 
     [Fact]
     public async Task Handle_ExistingTextWidget_UpdatesAndSaves()

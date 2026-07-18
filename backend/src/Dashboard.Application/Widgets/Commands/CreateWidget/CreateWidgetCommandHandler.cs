@@ -1,3 +1,4 @@
+using AutoMapper;
 using Dashboard.Application.Common.Interfaces;
 using Dashboard.Domain.Entities;
 using Dashboard.Domain.Enums;
@@ -9,11 +10,13 @@ public sealed class CreateWidgetCommandHandler : IRequestHandler<CreateWidgetCom
 {
     private readonly IWidgetRepository _repository;
     private readonly IRandomDataGenerator _dataGenerator;
+    private readonly IMapper _mapper;
 
-    public CreateWidgetCommandHandler(IWidgetRepository repository, IRandomDataGenerator dataGenerator)
+    public CreateWidgetCommandHandler(IWidgetRepository repository, IRandomDataGenerator dataGenerator, IMapper mapper)
     {
         _repository = repository;
         _dataGenerator = dataGenerator;
+        _mapper = mapper;
     }
 
     public async Task<WidgetDto> Handle(CreateWidgetCommand request, CancellationToken cancellationToken)
@@ -32,6 +35,6 @@ public sealed class CreateWidgetCommandHandler : IRequestHandler<CreateWidgetCom
         await _repository.AddAsync(widget, cancellationToken);
         await _repository.SaveChangesAsync(cancellationToken);
 
-        return WidgetDto.FromEntity(widget);
+        return _mapper.Map<WidgetDto>(widget);
     }
 }

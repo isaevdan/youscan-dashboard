@@ -11,7 +11,7 @@ public class GetWidgetsQueryHandlerTests
 {
     private readonly IWidgetRepository _repository = Substitute.For<IWidgetRepository>();
 
-    private GetWidgetsQueryHandler CreateHandler() => new(_repository);
+    private GetWidgetsQueryHandler CreateHandler() => new(_repository, TestMapper.Instance);
 
     [Fact]
     public async Task Handle_ReturnsWidgetsOrderedByPosition()

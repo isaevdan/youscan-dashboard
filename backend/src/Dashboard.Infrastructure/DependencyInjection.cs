@@ -8,11 +8,18 @@ namespace Dashboard.Infrastructure;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
-        var connectionString = configuration.GetConnectionString("Default") ?? "Data Source=dashboard.db";
+        // Connection string is resolved lazily from DI when the DbContext is created (per scope),
+        // not captured eagerly here - so config overrides applied after registration (e.g. by
+        // WebApplicationFactory in tests) still take effect.
+        services.AddDbContext<DashboardDbContext>((serviceProvider, options) =>
+        {
+            var connectionString = serviceProvider.GetRequiredService<IConfiguration>().GetConnectionString("Default")
+                ?? "Data Source=dashboard.db";
+            options.UseSqlite(connectionString);
+        });
 
-        services.AddDbContext<DashboardDbContext>(options => options.UseSqlite(connectionString));
         services.AddScoped<IWidgetRepository, WidgetRepository>();
         services.AddSingleton<IRandomDataGenerator, RandomDataGenerator>();
 

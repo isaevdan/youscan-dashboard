@@ -88,7 +88,39 @@ describe('WidgetItem', () => {
     await waitFor(() => expect(receivedBody).toEqual({ text: 'updated' }));
   });
 
-  it('shows a save error when the PUT request fails', async () => {
+  it('saving successfully exits edit mode', async () => {
+    server.use(
+      http.put(`${API_URL}/api/widgets/1`, () =>
+        HttpResponse.json({ ...textWidget, data: { text: 'updated' } }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithClient(<WidgetItem widget={textWidget} />);
+
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(await screen.findByRole('button', { name: /edit/i })).toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('shows a save error and keeps the draft in edit mode when the PUT request fails', async () => {
+    server.use(
+      http.put(`${API_URL}/api/widgets/1`, () => HttpResponse.json({ title: 'Bad Request' }, { status: 400 })),
+    );
+    const user = userEvent.setup();
+    renderWithClient(<WidgetItem widget={textWidget} />);
+
+    await user.click(screen.getByRole('button', { name: /edit/i }));
+    await user.clear(screen.getByRole('textbox'));
+    await user.type(screen.getByRole('textbox'), 'unsaved draft');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(await screen.findByText(/failed to save/i)).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toHaveValue('unsaved draft');
+  });
+
+  it('cancelling after a failed save clears the save error', async () => {
     server.use(
       http.put(`${API_URL}/api/widgets/1`, () => HttpResponse.json({ title: 'Bad Request' }, { status: 400 })),
     );
@@ -97,7 +129,10 @@ describe('WidgetItem', () => {
 
     await user.click(screen.getByRole('button', { name: /edit/i }));
     await user.click(screen.getByRole('button', { name: /save/i }));
-
     expect(await screen.findByText(/failed to save/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /cancel/i }));
+
+    await waitFor(() => expect(screen.queryByText(/failed to save/i)).not.toBeInTheDocument());
   });
 });

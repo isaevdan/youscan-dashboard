@@ -23,9 +23,10 @@ export function WidgetItem({ widget }: WidgetItemProps) {
       {widget.type === 'Text' && (
         <TextWidget
           text={widget.data.text}
-          onSave={(text) => updateMutation.mutate({ id: widget.id, text })}
+          onSave={(text) => updateMutation.mutateAsync({ id: widget.id, text })}
           isSaving={updateMutation.isPending}
           saveError={updateMutation.isError ? 'Failed to save text' : undefined}
+          onCancel={() => updateMutation.reset()}
         />
       )}
       {widget.type === 'LineChart' && <LineChartWidget data={widget.data} />}

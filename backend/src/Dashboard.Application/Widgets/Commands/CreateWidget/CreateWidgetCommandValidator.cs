@@ -9,10 +9,7 @@ public sealed class CreateWidgetCommandValidator : AbstractValidator<CreateWidge
     {
         RuleFor(x => x.Type)
             .NotEmpty()
-            .Must(BeAValidWidgetType)
+            .Must(type => WidgetTypeParser.TryParse(type, out _))
             .WithMessage($"Type must be one of: {string.Join(", ", Enum.GetNames<WidgetType>())}.");
     }
-
-    private static bool BeAValidWidgetType(string type) =>
-        Enum.TryParse<WidgetType>(type, ignoreCase: true, out var parsed) && Enum.IsDefined(parsed);
 }

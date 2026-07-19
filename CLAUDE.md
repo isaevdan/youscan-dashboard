@@ -1,6 +1,6 @@
 # YouScan Test Task — Full-Stack Dashboard
 
-Full spec lives in [README.md](README.md) — read it before making architecture decisions. This file tracks conventions and commands. README.md currently holds the raw assignment brief; it will be expanded into the full project README (run/test/deploy instructions, architecture, limitations) once the deployment step lands.
+Full spec lives in [README.md](README.md) — read it before making architecture decisions. This file tracks conventions and commands. README.md is the full project README: run/test/deploy instructions, architecture, and design notes.
 
 ## What this is
 A dashboard app with a grid of widgets (line chart, bar chart, text). Widgets are added via a button, laid out 3-per-row, persist across reloads (position + data), and are deletable. Text widgets are editable in place.
@@ -10,8 +10,6 @@ A dashboard app with a grid of widgets (line chart, bar chart, text). Widgets ar
 - **Frontend**: React 18 + TypeScript + Vite, Ant Design, React Query, Recharts
 - **Process**: TDD across the full stack — tests written before implementation at every layer
 - **Containerization**: Docker + docker-compose locally; deployed to **Azure Container Apps** via Docker images on Docker Hub
-
-Full architecture/sequencing detail lives in the approved plan at `C:\Users\Denys\.claude\plans\cached-puzzling-turtle.md`.
 
 ## Structure
 ```
@@ -41,7 +39,7 @@ Full architecture/sequencing detail lives in the approved plan at `C:\Users\Deny
 - Frontend must show per-widget loading and error states — don't let one widget's fetch failure break the grid.
 - `tsc` must pass with zero errors before calling frontend work done.
 
-## Acceptance criteria (from REQUIREMENTS.md)
+## Acceptance criteria (from the assignment brief)
 - Deployed and publicly testable (Cloudflare/Vercel/etc.)
 - Text edits persist through backend
 - TypeScript compiles clean

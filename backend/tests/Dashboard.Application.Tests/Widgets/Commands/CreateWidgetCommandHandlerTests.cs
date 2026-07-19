@@ -1,3 +1,4 @@
+using Dashboard.Application.Common.Exceptions;
 using Dashboard.Application.Common.Interfaces;
 using Dashboard.Application.Widgets.Commands.CreateWidget;
 using Dashboard.Domain.Entities;
@@ -73,6 +74,45 @@ public class CreateWidgetCommandHandlerTests
         await CreateHandler().Handle(new CreateWidgetCommand(type), CancellationToken.None);
 
         _dataGenerator.Received(1).GenerateChartDataJson();
+    }
+
+    [Fact]
+    public async Task Handle_NumericTypeString_Throws()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => CreateHandler().Handle(new CreateWidgetCommand("1"), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Handle_SaveLosesOrderRace_RetriesWithRecomputedOrder()
+    {
+        _repository.GetMaxOrderAsync(Arg.Any<CancellationToken>()).Returns((int?)0, (int?)1);
+        _repository.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(
+            _ => Task.FromException(new UniqueConstraintViolationException("duplicate Order")),
+            _ => Task.CompletedTask);
+
+        var result = await CreateHandler().Handle(new CreateWidgetCommand("Text"), CancellationToken.None);
+
+        // First attempt read max 0 and tried Order 1; after losing the race the
+        // handler re-read max 1 and persisted Order 2 (row 0, column 2).
+        Assert.Equal(0, result.Row);
+        Assert.Equal(2, result.Column);
+        await _repository.Received(2).AddAsync(Arg.Any<Widget>(), Arg.Any<CancellationToken>());
+        await _repository.Received(2).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_EveryAttemptLosesOrderRace_ThrowsAfterMaxAttempts()
+    {
+        _repository.GetMaxOrderAsync(Arg.Any<CancellationToken>()).Returns((int?)0);
+        _repository.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(_ => Task.FromException(new UniqueConstraintViolationException("duplicate Order")));
+
+        await Assert.ThrowsAsync<UniqueConstraintViolationException>(
+            () => CreateHandler().Handle(new CreateWidgetCommand("Text"), CancellationToken.None));
+
+        await _repository.Received(CreateWidgetCommandHandler.MaxAttempts)
+            .SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]

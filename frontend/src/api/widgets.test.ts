@@ -1,11 +1,16 @@
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { server } from '../test/msw/server';
+import { apiClient } from './client';
 import { createWidget, deleteWidget, getWidgetsPage, updateWidgetText } from './widgets';
 
 const API_URL = 'http://localhost:8080';
 
 describe('widgets api', () => {
+  it('the shared client has a finite request timeout so hung requests reject', () => {
+    expect(apiClient.defaults.timeout).toBe(10_000);
+  });
+
   it('getWidgetsPage fetches and returns a page of widgets', async () => {
     server.use(
       http.get(`${API_URL}/api/widgets`, () =>

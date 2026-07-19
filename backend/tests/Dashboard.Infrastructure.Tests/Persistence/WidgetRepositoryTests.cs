@@ -1,3 +1,4 @@
+using Dashboard.Application.Common.Exceptions;
 using Dashboard.Domain.Entities;
 using Dashboard.Domain.Enums;
 using Dashboard.Infrastructure.Persistence;
@@ -175,6 +176,50 @@ public class WidgetRepositoryTests : IDisposable
         var stillThere = await new WidgetRepository(verifyContext).GetByIdAsync(id, CancellationToken.None);
 
         Assert.Null(stillThere);
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_DuplicateOrder_ThrowsUniqueConstraintViolation()
+    {
+        await using (var context = CreateContext())
+        {
+            var repository = new WidgetRepository(context);
+            await repository.AddAsync(Widget.Create(WidgetType.Text, order: 0, dataJson: "{\"text\":\"\"}"), CancellationToken.None);
+            await repository.SaveChangesAsync(CancellationToken.None);
+        }
+
+        await using var duplicateContext = CreateContext();
+        var duplicateRepository = new WidgetRepository(duplicateContext);
+        await duplicateRepository.AddAsync(Widget.Create(WidgetType.Text, order: 0, dataJson: "{\"text\":\"\"}"), CancellationToken.None);
+
+        await Assert.ThrowsAsync<UniqueConstraintViolationException>(
+            () => duplicateRepository.SaveChangesAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_AfterUniqueConstraintViolation_RetryWithFreeOrderSucceeds()
+    {
+        await using (var context = CreateContext())
+        {
+            var repository = new WidgetRepository(context);
+            await repository.AddAsync(Widget.Create(WidgetType.Text, order: 0, dataJson: "{\"text\":\"\"}"), CancellationToken.None);
+            await repository.SaveChangesAsync(CancellationToken.None);
+        }
+
+        // The failed insert must be detached from the change tracker, so a retry on
+        // the same context/repository (as the create handler does) can succeed.
+        await using var retryContext = CreateContext();
+        var retryRepository = new WidgetRepository(retryContext);
+        await retryRepository.AddAsync(Widget.Create(WidgetType.Text, order: 0, dataJson: "{\"text\":\"\"}"), CancellationToken.None);
+        await Assert.ThrowsAsync<UniqueConstraintViolationException>(
+            () => retryRepository.SaveChangesAsync(CancellationToken.None));
+
+        await retryRepository.AddAsync(Widget.Create(WidgetType.Text, order: 1, dataJson: "{\"text\":\"\"}"), CancellationToken.None);
+        await retryRepository.SaveChangesAsync(CancellationToken.None);
+
+        await using var verifyContext = CreateContext();
+        var page = await new WidgetRepository(verifyContext).GetPageAsync(after: null, limit: 10, CancellationToken.None);
+        Assert.Equal([0, 1], page.Select(w => w.Order));
     }
 
     [Fact]

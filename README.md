@@ -26,6 +26,11 @@ The backend runs on Azure Container Apps with `min replicas: 0`, so the very fir
 - Per-widget loading and error states — one widget's fetch failure doesn't break the rest of the grid
 - Cursor-paginated, infinite-scrolling grid, with a back-to-top button that appears once the page has scrolled past the fold
 
+## Design notes
+
+- The grid renders widgets as a flat ordered sequence (3 per row via the layout); the `row`/`column` fields on the API's widget DTO are derived, informational values computed from the widget's order — the frontend does not position widgets by them.
+- The API self-documents via OpenAPI at `/openapi/v1.json` (enabled in all environments, including the deployed backend).
+
 ## Project structure
 
 ```
@@ -81,6 +86,7 @@ Frontend:
 ```
 cd frontend
 npm run typecheck
+npm run lint
 npm run test
 ```
 
@@ -97,7 +103,7 @@ npm run test
 Two GitHub Actions workflows, triggered on push to `master` (path-filtered) and manually via `workflow_dispatch`:
 
 - **`.github/workflows/backend.yml`**: `dotnet test` → build & push the Docker image to Docker Hub → deploy to Container Apps. Azure authentication uses **OIDC** (`azure/login@v2` with a federated credential on an Azure AD app registration) — no long-lived Azure secret is stored in GitHub at all.
-- **`.github/workflows/frontend.yml`**: `npm run typecheck && npm run test && npm run build` → deploy to Static Web Apps via its official deploy action.
+- **`.github/workflows/frontend.yml`**: `npm run typecheck && npm run lint && npm run test && npm run build` → deploy to Static Web Apps via its official deploy action.
 
 Required GitHub repo secrets:
 

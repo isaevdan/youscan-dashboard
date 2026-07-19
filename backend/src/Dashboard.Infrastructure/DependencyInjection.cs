@@ -16,7 +16,8 @@ public static class DependencyInjection
         services.AddDbContext<DashboardDbContext>((serviceProvider, options) =>
         {
             var connectionString = serviceProvider.GetRequiredService<IConfiguration>().GetConnectionString("Default")
-                ?? "Data Source=dashboard.db";
+                ?? throw new InvalidOperationException(
+                    "ConnectionStrings is not configured");
             options.UseSqlite(connectionString);
         });
 

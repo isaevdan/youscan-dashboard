@@ -13,6 +13,7 @@ builder.Services.AddInfrastructure();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.AddOpenApi();
 
 builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -26,6 +27,9 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseCors("Frontend");
+
+// Enabled in all environments so the deployed API self-documents at /openapi/v1.json.
+app.MapOpenApi();
 
 app.MapWidgetEndpoints();
 

@@ -73,6 +73,27 @@ describe('Dashboard', () => {
     expect(await screen.findByRole('button', { name: /edit/i })).toBeInTheDocument();
   });
 
+  it('shows an error and keeps the grid rendered when adding a widget fails', async () => {
+    const existing = [{ id: 1, type: 'Text', row: 0, column: 0, data: { text: 'existing-widget' } }];
+    server.use(
+      http.get(`${API_URL}/api/widgets`, () =>
+        HttpResponse.json({ items: existing, hasMore: false, nextCursor: null }),
+      ),
+      http.post(`${API_URL}/api/widgets`, () =>
+        HttpResponse.json({ title: 'Server Error' }, { status: 500 }),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderWithClient(<Dashboard />);
+
+    await screen.findByText('existing-widget');
+    await user.click(screen.getByRole('button', { name: /add text/i }));
+
+    expect(await screen.findByText(/failed to add widget/i)).toBeInTheDocument();
+    expect(screen.getByText('existing-widget')).toBeInTheDocument();
+  });
+
   describe('infinite scroll', () => {
     let capturedCallback: IntersectionObserverCallback | undefined;
     let originalIntersectionObserver: typeof IntersectionObserver;

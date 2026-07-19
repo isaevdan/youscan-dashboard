@@ -23,6 +23,12 @@ public class CreateWidgetCommandValidatorTests
     [InlineData("")]
     [InlineData("PieChart")]
     [InlineData("123")]
+    // Numeric strings map onto enum values via Enum.TryParse — the contract is
+    // names only, so they must be rejected.
+    [InlineData("1")]
+    [InlineData("2")]
+    [InlineData("3")]
+    [InlineData("999")]
     public void Validate_WithInvalidType_HasErrors(string type)
     {
         var result = _validator.Validate(new CreateWidgetCommand(type));

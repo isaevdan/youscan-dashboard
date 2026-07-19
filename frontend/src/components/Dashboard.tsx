@@ -24,6 +24,17 @@ export function Dashboard() {
         <Button onClick={() => createMutation.mutate('Text')}>Add Text</Button>
       </Space>
 
+      {/* React Query resets isError when the next create starts, so this clears on retry. */}
+      {createMutation.isError && (
+        <Alert
+          type="error"
+          message="Failed to add widget"
+          description="Please try again."
+          closable
+          style={{ marginBottom: 16 }}
+        />
+      )}
+
       {widgetsQuery.isLoading && <Skeleton active />}
       {widgetsQuery.isError && (
         <Alert type="error" message="Failed to load widgets" description="Please try refreshing the page." />

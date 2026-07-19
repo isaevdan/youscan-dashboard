@@ -38,4 +38,31 @@ public class UpdateWidgetTextCommandValidatorTests
 
         Assert.False(result.IsValid);
     }
+
+    [Fact]
+    public void Validate_WithNullText_MessageSaysNull_NotEmpty()
+    {
+        var result = _validator.Validate(new UpdateWidgetTextCommand(1, null!));
+
+        var error = Assert.Single(result.Errors, e => e.PropertyName == nameof(UpdateWidgetTextCommand.Text));
+        Assert.Equal("'Text' must not be null.", error.ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_WithTextAtMaxLength_HasNoErrors()
+    {
+        var result = _validator.Validate(
+            new UpdateWidgetTextCommand(1, new string('a', UpdateWidgetTextCommandValidator.MaxTextLength)));
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void Validate_WithTextOverMaxLength_HasErrors()
+    {
+        var result = _validator.Validate(
+            new UpdateWidgetTextCommand(1, new string('a', UpdateWidgetTextCommandValidator.MaxTextLength + 1)));
+
+        Assert.False(result.IsValid);
+    }
 }

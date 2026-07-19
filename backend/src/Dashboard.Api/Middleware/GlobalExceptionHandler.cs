@@ -15,6 +15,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             NotFoundException => (StatusCodes.Status404NotFound, "Not Found"),
             ValidationException => (StatusCodes.Status400BadRequest, "Validation Failed"),
             InvalidWidgetOperationException => (StatusCodes.Status400BadRequest, "Invalid Operation"),
+            UniqueConstraintViolationException => (StatusCodes.Status409Conflict, "Conflict"),
             _ => (StatusCodes.Status500InternalServerError, "Server Error")
         };
 

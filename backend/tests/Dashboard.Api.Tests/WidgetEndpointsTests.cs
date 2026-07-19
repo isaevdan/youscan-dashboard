@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Dashboard.Application.Widgets.Commands.CreateWidget;
 using Xunit;
 
 namespace Dashboard.Api.Tests;
@@ -68,6 +69,33 @@ public class WidgetEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateWidget_NumericTypeString_Returns400()
+    {
+        // The contract is enum names only — "1" must not silently create a LineChart.
+        var response = await _client.PostAsJsonAsync("/api/widgets", new { type = "1" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateWidget_ParallelRequests_AssignDistinctGridPositions()
+    {
+        // Invariant: the parallel request count must be <= MaxAttempts — worst case a
+        // request loses N-1 Order races before succeeding, so any count above
+        // MaxAttempts could legitimately exhaust retries and return 409 instead of 201.
+        // Referencing the constant keeps this test in lockstep with the handler.
+        var responses = await Task.WhenAll(Enumerable.Range(0, CreateWidgetCommandHandler.MaxAttempts)
+            .Select(_ => _client.PostAsJsonAsync("/api/widgets", new { type = "Text" })));
+
+        Assert.All(responses, r => Assert.Equal(HttpStatusCode.Created, r.StatusCode));
+
+        var created = await Task.WhenAll(responses.Select(r => r.Content.ReadFromJsonAsync<WidgetResponse>()));
+        var orders = created.Select(w => w!.Row * 3 + w.Column).ToList();
+
+        Assert.Equal(orders.Count, orders.Distinct().Count());
+    }
+
+    [Fact]
     public async Task UpdateWidgetText_ExistingTextWidget_Returns200()
     {
         var createResponse = await _client.PostAsJsonAsync("/api/widgets", new { type = "Text" });
@@ -78,6 +106,18 @@ public class WidgetEndpointsTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, updateResponse.StatusCode);
         var updated = await updateResponse.Content.ReadFromJsonAsync<WidgetResponse>();
         Assert.Equal("hello", updated!.Data.GetProperty("text").GetString());
+    }
+
+    [Fact]
+    public async Task UpdateWidgetText_TextOverMaxLength_Returns400()
+    {
+        var createResponse = await _client.PostAsJsonAsync("/api/widgets", new { type = "Text" });
+        var created = await createResponse.Content.ReadFromJsonAsync<WidgetResponse>();
+
+        var updateResponse = await _client.PutAsJsonAsync(
+            $"/api/widgets/{created!.Id}", new { text = new string('a', 5001) });
+
+        Assert.Equal(HttpStatusCode.BadRequest, updateResponse.StatusCode);
     }
 
     [Fact]
@@ -188,5 +228,13 @@ public class WidgetEndpointsTests : IDisposable
         var response = await _client.GetAsync("/api/widgets?limit=101");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task OpenApiDocument_Returns200()
+    {
+        var response = await _client.GetAsync("/openapi/v1.json");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }
